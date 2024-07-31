@@ -17,16 +17,23 @@ class UsuarioFormController extends TPage {
         parent::__construct();
         $this->form = new BootstrapFormBuilder('form_usuario'); // qualquer coisa colocar um nome no formulário, ex: form_alunos
         $id = new THidden('id');
-        $nomeUsuario = new TEntry('nome_usuario');
-        $senha = new TEntry('senha');
+        $nomeUsuario = new TEntry('name');
+        $login = new TEntry('login');
+        $senha = new TEntry('password');
+        $email = new TEntry('email');
+
         $this->form->addFields([new TLabel('')], [$id]); // precisa dessa parte para poder editar mesmo usando "THidden" 
         $this->form->addFields([new TLabel('Nome:')], [$nomeUsuario]);
+        $this->form->addFields([new TLabel('Login:')], [$login]);
         $this->form->addFields([new TLabel('Senha:')], [$senha]);
+        $this->form->addFields([new TLabel('E-mail:')], [$email]);
         $this->form->addAction('Salvar', new TAction(array($this, 'onSave')), 'fa:save green');
         $this->form->addAction('Limpar', new TAction(array($this, 'onClear')), 'fa:eraser orange');
         parent::add($this->form);
         
     }
+
+    // Só para teste --->  echo '<pre>'; print_r($method); echo '</pre>'; exit;
 
     public function onClear() {
         $this->form->clear();
@@ -35,7 +42,7 @@ class UsuarioFormController extends TPage {
     public function onEdit($param) {
         try {
             if (isset($param['id'])) {
-                TTransaction::open('sample');
+                TTransaction::open('permission');
                 $usuario = new Usuario($param['key']);
                 $this->form->setData($usuario);
                 TTransaction::close();
@@ -44,26 +51,26 @@ class UsuarioFormController extends TPage {
             }
         } catch (Exception $e) {
             new TMessage('error', $e->getMessage());
-            TTransaction::rollback();
+            // TTransaction::rollback();
         }
     }
         
     // Senha criptografada no formato MD5
     public function onSave() {
         try {
-            TTransaction::open('sample');
+            TTransaction::open('permission');
             $data = $this->form->getData();
-            if(empty($data->nome_usuario)) {
+
+            if(empty($data->name)) {
                 throw new Exception('Nome do usuário é obrigatório.');
-            } else if(!preg_match("/^[A-Za-z0-9]{5,}$/", $data->nome_usuario)) {
-                throw new Exception('Nome do usuário inválido.');
-            } else if (!UserExists::isUsernameUnique($data->nome_usuario, $data->id)) {
+            } else if (!UserExists::isUsernameUnique($data->name, $data->id)) {
                 throw new Exception('Nome de usuário já existe. Por favor, escolha outro.');
-            } else if(empty($data->senha)) {
+            } else if(empty($data->password)) {
                 throw new Exception('Senha é obrigatório.');
-            } else if(!preg_match("/^[A-Za-z0-9]{6,}$/", $data->senha)) {
+            } else if(!preg_match("/^[A-Za-z0-9]{6,}$/", $data->password)) {
                 throw new Exception('Senha inválida.');
             }
+
             $is_new = empty($data->id);
             if ($is_new) {
                 $usuario = new Usuario();
@@ -71,11 +78,13 @@ class UsuarioFormController extends TPage {
                 $usuario = new Usuario($data->id);
             }
     
-            $usuario->nome_usuario = $data->nome_usuario;
+            $usuario->name = $data->name;
+            $usuario->login = $data->login;
     
-            if (!empty($data->senha)) {
-                $usuario->senha = md5($data->senha);
+            if (!empty($data->password)) {
+                $usuario->password = md5($data->password);
             }
+            $usuario->email = $data->email;
 
             $usuario->store();            
             $this->form->setData($usuario);
