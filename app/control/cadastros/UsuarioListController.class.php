@@ -52,13 +52,17 @@ class UsuarioListController extends TPage {
 
         // Criar colunas
         $id = new TDataGridColumn('id', 'ID', 'center', 50);
-        $nomeUsuario = new TDataGridColumn('nome_usuario', 'Usuário:', 'center', 300);
-        $senha = new TDataGridColumn('senha', 'Senha:', 'center', 600);
+        $nomeUsuario = new TDataGridColumn('name', 'Usuário:', 'center', 300);
+        $login = new TDataGridColumn('login', 'Login:', 'center', 300);
+        $senha = new TDataGridColumn('password', 'Senha:', 'center', 600);
+        $email = new TDataGridColumn('email', 'E-mail:', 'center', 600);
 
         // Adicionar colunas ao datagrid
         $this->datagrid->addColumn($id);
         $this->datagrid->addColumn($nomeUsuario);
+        $this->datagrid->addColumn($login);
         $this->datagrid->addColumn($senha);
+        $this->datagrid->addColumn($email);
 
         // Adicionar ações ao datagrid
         $edit_action = new TDataGridAction(array('UsuarioFormController', 'onEdit'));
@@ -79,7 +83,7 @@ class UsuarioListController extends TPage {
 
     public function onReload($param = NULL) {
         try {
-            TTransaction::open('sample');
+            TTransaction::open('permission');
             $repository = new TRepository('Usuario');
             $criteria = new TCriteria();
             $objects = $repository->load($criteria, FALSE);
@@ -92,29 +96,33 @@ class UsuarioListController extends TPage {
             TTransaction::close();
         } catch (Exception $e) {
             new TMessage('error', $e->getMessage());
-            TTransaction::rollback();
+            // TTransaction::rollback();
         }
     }
-    
+
     public function onDelete($param) {
-        $action1 = new TAction(array($this, 'Delete'));
-        $action1->setParameter('id', $param['id']);
-        new TQuestion('Você realmente deseja excluir o usuário?', $action1);
-    }
-    
-    public function Delete($param) {
         try {
-            TTransaction::open('sample');
-            $cliente = new Usuario($param['id']);
-            $cliente->delete();
-            TTransaction::close();
-            $this->onReload($param);
-            new TMessage('info', 'Usuário excluído com sucesso');
+            // Verifica se a confirmação já foi feita
+            if (isset($param['confirm']) && $param['confirm'] === 'yes') {
+                TTransaction::open('permission');
+                $cliente = new Usuario($param['id']);
+                $cliente->delete();
+                TTransaction::close();
+                $this->onReload($param);
+                new TMessage('info', 'Usuário excluído com sucesso');
+            } else {
+                // Se a confirmação não foi feita, mostra a pergunta ao usuário
+                $action = new TAction(array($this, 'onDelete'));
+                $action->setParameter('id', $param['id']);
+                $action->setParameter('confirm', 'yes');
+                new TQuestion('Você realmente deseja excluir o usuário?', $action);
+            }
         } catch (Exception $e) {
             new TMessage('error', $e->getMessage());
             TTransaction::rollback();
         }
     }
+
     
     public function show() {
         $this->onReload();

@@ -109,24 +109,26 @@ class VendaListController extends TPage {
     }
     
     public function onDelete($param) {
-        $action1 = new TAction(array($this, 'Delete'));
-        $action1->setParameter('id', $param['id']);
-        new TQuestion('Você realmente deseja excluir a venda?', $action1);
-    }
-    
-    public function Delete($param) {
         try {
-            TTransaction::open('sample');
-            $venda = new Venda($param['id']);
-            $venda->delete();
-            TTransaction::close();
-            
-            $this->onReload($param);
-            
-            new TMessage('info', 'Venda excluída com sucesso');
+            // Verifica se a confirmação já foi feita
+            if (isset($param['confirm']) && $param['confirm'] === 'yes') {
+                TTransaction::open('sample');
+                $venda = new Venda($param['id']);
+                $venda->delete();
+                TTransaction::close();
+                
+                $this->onReload($param);
+                
+                new TMessage('info', 'Venda excluída com sucesso');
+            } else {
+                // Se a confirmação não foi feita, mostra a pergunta ao usuário
+                $action = new TAction(array($this, 'onDelete'));
+                $action->setParameter('id', $param['id']);
+                $action->setParameter('confirm', 'yes');
+                new TQuestion('Você realmente deseja excluir a venda?', $action);
+            }
         } catch (Exception $e) {
             new TMessage('error', $e->getMessage());
-            TTransaction::rollback();
         }
     }
     

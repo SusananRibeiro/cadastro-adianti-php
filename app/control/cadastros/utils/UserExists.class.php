@@ -7,11 +7,11 @@ use Adianti\Database\TTransaction;
 
 class UserExists {
     public static function isUsernameUnique($username, $id = null) {
-        TTransaction::open('sample');
+        TTransaction::open('permission');
         
         $repository = new TRepository('Usuario');
         $criteria = new TCriteria();
-        $criteria->add(new TFilter('nome_usuario', '=', $username));
+        $criteria->add(new TFilter('name', '=', $username));
         
         if ($id) {
             // Exclui o próprio usuário da verificação

@@ -107,28 +107,38 @@ class ClienteListController extends TPage {
     }
     
     public function onDelete($param) {
-        $action1 = new TAction(array($this, 'Delete'));
-        $action1->setParameter('id', $param['id']);
-        new TQuestion('Você realmente deseja excluir o cliente?', $action1);
-    }
-    
-    public function Delete($param) {
         try {
-            TTransaction::open('sample');
-            $id = $param['id'];
-            if (ClientExists::hasSales($id)) {
-                throw new Exception('Este cliente possui vendas associadas e não pode ser excluído.');
+            // Verifica se a confirmação já foi feita
+            if (isset($param['confirm']) && $param['confirm'] === 'yes') {
+                TTransaction::open('sample');
+                $id = $param['id'];
+    
+                // Verifica se o cliente possui vendas associadas
+                if (ClientExists::hasSales($id)) {
+                    throw new Exception('Este cliente possui vendas associadas e não pode ser excluído.');
+                }
+    
+                // Exclui o cliente
+                $cliente = new Cliente($id);
+                $cliente->delete();
+                TTransaction::close();
+    
+                // Mensagem de sucesso e redirecionamento
+                new TMessage('info', 'Cliente excluído com sucesso');
+                AdiantiCoreApplication::loadPage('ClienteListController');
+            } else {
+                // Se a confirmação não foi feita, exibe a pergunta ao usuário
+                $action = new TAction(array($this, 'onDelete'));
+                $action->setParameter('id', $param['id']);
+                $action->setParameter('confirm', 'yes');
+                new TQuestion('Você realmente deseja excluir o cliente?', $action);
             }
-            $cliente = new Cliente($id);
-            $cliente->delete();
-            TTransaction::close();
-            new TMessage('info', 'Cliente excluído com sucesso');
-            AdiantiCoreApplication::loadPage('ClienteListController');
         } catch (Exception $e) {
             new TMessage('error', $e->getMessage());
             TTransaction::rollback();
         }
     }
+    
     
     public function show() {
         $this->onReload();

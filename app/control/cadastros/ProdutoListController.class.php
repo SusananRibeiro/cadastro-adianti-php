@@ -102,28 +102,37 @@ class ProdutoListController extends TPage {
     }
     
     public function onDelete($param) {
-        $action1 = new TAction(array($this, 'Delete'));
-        $action1->setParameter('id', $param['id']);
-        new TQuestion('Você realmente deseja excluir o produto?', $action1);
-    }
-    
-    public function Delete($param) {
         try {
-            TTransaction::open('sample');
-            $id = $param['id'];
-            if (ProductExists::hasSales($id)) {
-                throw new Exception('Este produto possui vendas associadas e não pode ser excluído.');
+            // Verifica se a confirmação já foi feita
+            if (isset($param['confirm']) && $param['confirm'] === 'yes') {
+                TTransaction::open('sample');
+                $id = $param['id'];
+    
+                // Verifica se o produto possui vendas associadas
+                if (ProductExists::hasSales($id)) {
+                    throw new Exception('Este produto possui vendas associadas e não pode ser excluído.');
+                }
+    
+                // Exclui o produto
+                $produto = new Produto($id);
+                $produto->delete();
+                TTransaction::close();
+    
+                // Mensagem de sucesso e redirecionamento
+                new TMessage('info', 'Produto excluído com sucesso');
+                AdiantiCoreApplication::loadPage('ProdutoListController');
+            } else {
+                // Se a confirmação não foi feita, exibe a pergunta ao usuário
+                $action = new TAction(array($this, 'onDelete'));
+                $action->setParameter('id', $param['id']);
+                $action->setParameter('confirm', 'yes');
+                new TQuestion('Você realmente deseja excluir o produto?', $action);
             }
-            $produto = new Produto($id);
-            $produto->delete();
-            TTransaction::close();
-            new TMessage('info', 'Produto excluído com sucesso');
-            AdiantiCoreApplication::loadPage('ProdutoListController');
         } catch (Exception $e) {
             new TMessage('error', $e->getMessage());
-            TTransaction::rollback();
         }
     }
+    
     
     public function show() {
         $this->onReload();
